@@ -69,3 +69,18 @@ Ise production-level product banane ke liye hum ye advanced features integrate k
 ### Step 1: Database Setup
 ```sql
 CREATE DATABASE upimesh;
+Step 2: Configure Properties
+src/main/resources/application.properties mein:
+
+Properties
+spring.datasource.url=jdbc:mysql://localhost:3306/upimesh
+spring.datasource.username=your_user
+spring.datasource.password=your_password
+spring.jpa.hibernate.ddl-auto=update
+Step 3: Run the Engine
+Bash
+./mvnw spring-boot:run
+👤 Author
+Utkarsh Yadav Computer Science Engineering | Java Full Stack Developer
+
+GitHub Profile | LinkedIn Profile
