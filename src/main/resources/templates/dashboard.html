@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexDrop UPI — Offline Mesh Payments</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root { --primary: #00baf2; --dark: #002e6e; --bg: #f0f3f7; --white: #ffffff; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--bg); padding-bottom: 75px; }
+
+        .page-section { display: none; animation: fadeIn 0.3s ease; }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .header { background: var(--dark); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 20px; font-weight: 800; }
+        .logo span { color: var(--primary); }
+
+        .container { max-width: 500px; margin: 0 auto; padding: 15px; }
+        .wallet-card { background: linear-gradient(135deg, #002e6e 0%, #00baf2 100%); border-radius: 20px; padding: 25px; color: white; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,46,110,0.2); }
+        .card { background: var(--white); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ddd; z-index: 1000; }
+        .nav-item { color: #718096; text-align: center; font-size: 11px; cursor: pointer; transition: 0.2s; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+        .nav-item i { font-size: 22px; display: block; margin-bottom: 2px; }
+
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; outline: none; background: #fff; }
+        .btn-main { background: var(--primary); color: white; border: none; width: 100%; padding: 14px; border-radius: 10px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+
+        .tx-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .received { color: #2ea043; font-weight: bold; }
+        .deducted { color: #e53e3e; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">Nex<span>Drop</span> UPI</div>
+    <div><i class="fa-solid fa-circle-user" style="font-size: 1.4rem;"></i></div>
+</div>
+
+<div class="container">
+    <div id="home" class="page-section active">
+        <div class="wallet-card">
+            <h3>NexDrop Balance</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h1 id="wall-bal">₹ 0.00</h1>
+                <button onclick="showPage('wallet')" style="background:rgba(255,255,255,0.2); border:1px solid #fff; color:#fff; padding:6px 15px; border-radius:20px; font-size:12px; cursor:pointer;">+ Add Money</button>
+            </div>
+            <p style="font-size:11px; margin-top:10px; opacity:0.8;">Offline Mesh Network Active <i class="fa-solid fa-shield-halved"></i></p>
+        </div>
+
+        <div class="card" style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; text-align:center; font-size:10px; font-weight:600;">
+            <div onclick="showPage('scan')"><i class="fa-solid fa-qrcode" style="font-size:22px; color:var(--primary); display:block; margin-bottom:5px;"></i>Scan</div>
+            <div onclick="gossip()"><i class="fa-solid fa-tower-broadcast" style="font-size:22px; color:var(--primary); display:block; margin-bottom:5px;"></i>Gossip</div>
+            <div onclick="flushBridges()"><i class="fa-solid fa-cloud-arrow-up" style="font-size:22px; color:var(--primary); display:block; margin-bottom:5px;"></i>Sync</div>
+            <div onclick="resetMesh()"><i class="fa-solid fa-rotate-left" style="font-size:22px; color:#e53e3e; display:block; margin-bottom:5px;"></i>Reset</div>
+        </div>
+
+        <div class="card">
+            <h4 style="font-size:14px; margin-bottom:10px; color:var(--dark);">Mesh Network Status</h4>
+            <div id="devices-list"></div>
+        </div>
+    </div>
+
+    <div id="scan" class="page-section">
+        <div class="card">
+            <div style="background:#000; height:180px; border-radius:15px; display:flex; align-items:center; justify-content:center; color:#fff; flex-direction:column; margin-bottom:15px;">
+                <i class="fa-solid fa-expand" style="font-size:40px; color:var(--primary); margin-bottom:10px;"></i>
+                <p>Align QR Code to Pay</p>
+            </div>
+            <select id="senderVpa">
+                <option value="alice@demo">Alice (Primary)</option>
+            </select>
+            <input type="text" id="receiverVpa" placeholder="Receiver VPA" value="bob@demo">
+            <input type="number" id="amount" placeholder="Amount (₹)">
+            <input type="password" id="pin" placeholder="Enter PIN (1234)" value="1234">
+            <button class="btn-main" onclick="sendPacket()">PAY SECURELY</button>
+        </div>
+    </div>
+
+    <div id="wallet" class="page-section">
+        <div class="card">
+            <h2>Add Money to NexDrop</h2>
+            <p style="font-size:12px; color:#666; margin-bottom:10px;">Balance will be updated in Alice's account.</p>
+            <input type="number" id="addAmount" placeholder="Enter Amount (₹)">
+            <button class="btn-main" onclick="executeAddMoney()">PROCEED TO ADD</button>
+        </div>
+    </div>
+
+    <div id="history" class="page-section">
+        <div class="card">
+            <h2>Transaction History</h2>
+            <div id="history-list" style="margin-top:10px;"></div>
+        </div>
+    </div>
+</div>
+
+<nav class="bottom-nav">
+    <div class="nav-item active" onclick="showPage('home')" id="nav-home"><i class="fa-solid fa-house"></i>Home</div>
+    <div class="nav-item" onclick="showPage('scan')" id="nav-scan"><i class="fa-solid fa-qrcode"></i>Scan</div>
+    <div class="nav-item" onclick="showPage('history')" id="nav-history"><i class="fa-solid fa-receipt"></i>History</div>
+    <div class="nav-item" onclick="showPage('settings')" id="nav-settings"><i class="fa-solid fa-gear"></i>Settings</div>
+</nav>
+
+<script>
+    function showPage(pageId) {
+        document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById(pageId);
+        if(target) target.classList.add('active');
+
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        const nav = document.getElementById('nav-' + pageId);
+        if(nav) nav.classList.add('active');
+    }
+
+    async function refresh() {
+        try {
+            const m = await fetch('/api/mesh/state').then(r => r.json());
+            const accs = await fetch('/api/accounts').then(r => r.json());
+            const txs = await fetch('/api/transactions').then(r => r.json());
+
+            const alice = accs.find(a => a.vpa === 'alice@demo');
+            if(alice) document.getElementById('wall-bal').textContent = `₹${parseFloat(alice.balance).toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+
+            document.getElementById('devices-list').innerHTML = m.devices.map(d => `
+                <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f0f0f0; font-size:13px;">
+                    <span style="font-weight:600;">${d.deviceId}</span>
+                    <span style="font-size:11px; padding:2px 8px; border-radius:10px; background:${d.hasInternet ? '#2ea043' : '#6e7681'}; color:white;">
+                        ${d.hasInternet ? '🌐 4G' : '🚫 Mesh'} (${d.packetCount})
+                    </span>
+                </div>
+            `).join('');
+
+            document.getElementById('history-list').innerHTML = txs.map(t => {
+                const isSent = t.senderVpa === 'alice@demo';
+                return `
+                    <div class="tx-item">
+                        <div>
+                            <div style="font-weight:600; font-size:14px;">${isSent ? 'Paid to ' + t.receiverVpa : 'Received from ' + t.senderVpa}</div>
+                            <div style="font-size:11px; color:#999;">${new Date(t.settledAt).toLocaleTimeString()} • ${t.status}</div>
+                        </div>
+                        <div class="${isSent ? 'deducted' : 'received'}">${isSent ? '-' : '+'} ₹${parseFloat(t.amount).toFixed(2)}</div>
+                    </div>
+                `;
+            }).reverse().join('');
+        } catch(e) { console.error("Refresh failed", e); }
+    }
+
+    // Money Add Fix: Calling API to update balance
+    async function executeAddMoney() {
+        const amt = document.getElementById('addAmount').value;
+        if(!amt || amt <= 0) return Swal.fire('Error', 'Invalid amount', 'error');
+
+        try {
+            const response = await fetch('/api/accounts/add-money', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vpa: 'alice@demo', amount: amt })
+            });
+
+            if (response.ok) {
+                Swal.fire({
+                    title: 'Adding Money...',
+                    timer: 1000,
+                    didOpen: () => { Swal.showLoading() }
+                }).then(() => {
+                    Swal.fire('Success!', `₹${amt} added to NexDrop Wallet`, 'success');
+                    document.getElementById('addAmount').value = '';
+                    showPage('home');
+                    refresh(); // Isse balance turant 5000 ho jayega
+                });
+            }
+        } catch (e) {
+            Swal.fire('Error', 'Failed to update balance', 'error');
+        }
+    }
+
+    async function sendPacket() {
+        const amt = document.getElementById('amount').value;
+        if(!amt || amt <= 0) return Swal.fire('Error', 'Enter amount', 'warning');
+
+        const body = {
+            senderVpa: 'alice@demo',
+            receiverVpa: document.getElementById('receiverVpa').value,
+            amount: parseFloat(amt),
+            pin: document.getElementById('pin').value,
+            ttl: 5, startDevice: 'phone-alice'
+        };
+        const r = await fetch('/api/demo/send', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }).then(r => r.json());
+        Swal.fire({ title: 'NexDrop UPI', text: `Payment of ₹${amt} broadcasted to Mesh!`, icon: 'success' });
+        showPage('home');
+        refresh();
+    }
+
+    async function gossip() {
+        const r = await fetch('/api/mesh/gossip', {method:'POST'}).then(r => r.json());
+        Swal.fire({ title: 'Mesh Gossip', text: `${r.transfers} packets shared between nodes`, icon: 'info', timer: 1000, showConfirmButton: false });
+        refresh();
+    }
+
+    async function flushBridges() {
+        const r = await fetch('/api/mesh/flush', {method:'POST'}).then(r => r.json());
+        const settled = r.results.filter(res => res.outcome === 'SETTLED').length;
+        if(settled > 0) Swal.fire('NexDrop Sync', `${settled} Payments Settled!`, 'success');
+        else Swal.fire('Sync', 'No new packets to sync.', 'info');
+        refresh();
+    }
+
+    async function resetMesh() {
+        await fetch('/api/mesh/reset', {method:'POST'});
+        Swal.fire('NexDrop Reset', 'All Mesh data cleared.', 'success');
+        refresh();
+    }
+
+    refresh();
+    setInterval(refresh, 4000);
+</script>
+</body>
+</html>
