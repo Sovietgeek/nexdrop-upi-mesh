@@ -1,7 +1,7 @@
 # 🚀 NexDrop UPI: Mesh-Routed Offline Payments
 
 **NexDrop UPI** ek cutting-edge Spring Boot solution hai jo financial inclusion ko extreme conditions (zero connectivity) mein reality banata hai. Ye system **Bluetooth Mesh Network** aur **Deferred Settlement** ka use karke payments ko un areas mein pahunchata hai jahan internet ka namo-nishan nahi hai.
-
+  
 ---
 
 ## 🌟 Key Innovations
